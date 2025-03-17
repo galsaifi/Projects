@@ -1,0 +1,116 @@
+---
+title: "NBDC Economic Impact 2021-2023"
+author: "Ghaith Al Saifi"
+date: "2024-02-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## NBDC All Clients
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(readxl)
+library(sf)
+library(scales)
+
+
+dat <- read_xlsx("NBDC Economic Impact 2021-2023.xlsx")
+county <- st_read("county_boundaries.geojson")
+```
+
+
+```{r}
+# Merging data
+dat_num <- dat %>%
+  filter(!is.na(`Physical Address County`) & `Physical Address State` == "Nebraska") %>%
+  group_by(`Physical Address County`) %>%
+  summarise(client_count = n())
+  
+merged <- left_join(county, dat_num, by = c("NAME" = "Physical Address County"))
+```
+
+
+```{r}
+# Plotting data
+colors <- c("#c6d0df", "#9aaac7", "#305f99")
+values <- c(0, 0.3, 0.5)
+
+nbdcPlot <- ggplot(data = merged, aes(fill = client_count))+
+  geom_sf(color = "white")+ 
+  scale_fill_gradientn(
+    colors = colors,
+    values = rescale(values),
+    breaks = c(1, 1650), 
+    na.value = "white",
+    trans = "log10",
+    guide = guide_colourbar(ticks = FALSE, direction = "horizontal")
+  ) +
+  geom_text(aes(label = client_count,
+                x = st_coordinates(st_centroid(geometry))[, 1],
+                y = st_coordinates(st_centroid(geometry))[, 2]), 
+                color = ifelse(merged$client_count %in% c(1650), "white", "black"), size = 6.3,
+            check_overlap = TRUE)+
+  theme_void()+
+  theme(
+    legend.title = element_blank(),
+    legend.position = c(0.91, 0.9),
+    legend.box.margin = margin(0, 0, 0, 0),
+    legend.margin = margin(-10, -10, -10, -10),  
+    legend.key.height = unit(1.2, "cm"),
+    legend.key.width = unit(1.5, "cm"),
+    legend.text = element_text(size = 20, face = "bold")
+  )
+nbdcPlot
+```
+
+```{r}
+# Export plot
+# ggsave("NBDC Economic Impact 21-23.jpg", p, width = 22, height = 10, units = "in", dpi = 1500)
+```
+
+## APEX Clients
+```{r}
+apex <- read_xlsx("APEX Clients/APEX Economic Impact 21-23.xlsx")
+
+apexClients <- apex %>%
+  group_by(`Physical Address County`) %>%
+  summarise(client_count = n())
+
+apexMerged <- left_join(county, apexClients, by = c("NAME" = "Physical Address County"))
+```
+
+
+```{r}
+apexPlot <- ggplot(data = apexMerged, aes(fill = client_count))+
+  geom_sf(color = "white")+ 
+  scale_fill_gradientn(
+    colors = colors,
+    values = rescale(values),
+    breaks = c(1, 1650), 
+    na.value = "white",
+    trans = "log10",
+    guide = guide_colourbar(ticks = FALSE, direction = "horizontal")
+  ) +
+  geom_text(aes(label = client_count,
+                x = st_coordinates(st_centroid(geometry))[, 1],
+                y = st_coordinates(st_centroid(geometry))[, 2]), 
+                color = ifelse(apexMerged$client_count %in% c(1650), "white", "black"), size = 6.3,
+            check_overlap = TRUE)+
+  theme_void()+
+  theme(
+    legend.title = element_blank(),
+    legend.position = c(0.91, 0.9),
+    legend.box.margin = margin(0, 0, 0, 0),
+    legend.margin = margin(-10, -10, -10, -10),  
+    legend.key.height = unit(1.2, "cm"),
+    legend.key.width = unit(1.5, "cm"),
+    legend.text = element_text(size = 20, face = "bold")
+  )
+apexPlot
+```
+
